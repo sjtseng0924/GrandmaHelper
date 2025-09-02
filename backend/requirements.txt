@@ -4,3 +4,5 @@ google-cloud-aiplatform
 cloud-sql-python-connector 
 sqlalchemy
 pg8000
+psycopg2-binary
+sqlalchemy
