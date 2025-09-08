@@ -7,6 +7,7 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 from vertexai.generative_models import Part
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+from googleapiclient.discovery import build
 
 app = Flask(__name__)
 
@@ -82,6 +83,39 @@ def insert_conversation(user_message, user_vector, ai_response, screen_info, goa
         conn.commit()
 
 
+def search_line_help(query, num_results=5):
+    """Search LINE help documentation using Custom Search API"""
+    API_KEY = os.environ.get("GOOGLE_SEARCH_API_KEY")
+    SEARCH_ENGINE_ID = "44e73185ae7344428"  # Your provided search engine ID
+    
+    if not API_KEY:
+        print("Warning: GOOGLE_SEARCH_API_KEY not found in environment variables")
+        return []
+    
+    try:
+        service = build("customsearch", "v1", developerKey=API_KEY)
+        result = service.cse().list(
+            q=query,
+            cx=SEARCH_ENGINE_ID,
+            num=num_results,
+            hl='zh-TW'  # Set language to Traditional Chinese
+        ).execute()
+        
+        search_results = []
+        for item in result.get('items', []):
+            search_results.append({
+                'title': item.get('title'),
+                'link': item.get('link'),
+                'snippet': item.get('snippet'),
+                'displayLink': item.get('displayLink')
+            })
+        
+        return search_results
+    except Exception as e:
+        print(f"Search error: {e}")
+        return []
+
+
 @app.route('/', methods=['POST'])
 def handle_app_request():
     try:
@@ -132,8 +166,16 @@ def handle_app_request():
             for user_text, ai_text in similar_conversations:
                 rag_context += f"使用者: {user_text}\nGemini: {ai_text}\n\n"
 
+        # Always search LINE help documentation since service is only for LINE usage
+        search_results = search_line_help(user_message + " " + current_goal)
+        search_context = ""
+        if search_results:
+            search_context = "\n\n參考資料（來自LINE官方說明文件）：\n"
+            for result in search_results:
+                search_context += f"- {result['title']}: {result['snippet']}\n  連結：{result['link']}\n\n"
+
         prompt = f"""
-        你是一個幫助年長者使用各種手機 APP 的虛擬助手，你的首要任務是協助使用者達成「最終目標」。
+        你是一個幫助年長者使用LINE手機APP的虛擬助手，你的首要任務是協助使用者達成「最終目標」。
 
         請根據以下資訊判斷下一步的正確操作。
 
@@ -141,7 +183,7 @@ def handle_app_request():
 
         使用者訊息: {user_message}
 
-        歷史操作資訊(做為參考，請不要過於依賴，請當作非常不確定的參考):{rag_context}
+        歷史操作資訊(做為參考，請不要過於依賴，請當作非常不確定的參考):{rag_context}{search_context}
 
         規則：
         1. 你必須優先依照「最終目標」判斷，而不是使用者訊息。
@@ -197,6 +239,31 @@ def handle_app_request():
     except Exception as e:
         error_message = f"與服務或 Gemini 溝通時發生錯誤：{e}"
         return json.dumps({"status": "error", "message": error_message}), 500, {'Content-Type': 'application/json'}
+
+
+@app.route('/search', methods=['POST'])
+def search_endpoint():
+    """Custom search endpoint for testing LINE help documentation search"""
+    try:
+        request_json = request.get_json(silent=True)
+        if not request_json or 'query' not in request_json:
+            return json.dumps({"status": "error", "message": "Missing query parameter"}), 400
+        
+        query = request_json['query']
+        results = search_line_help(query)
+        
+        return json.dumps({
+            'status': 'success',
+            'query': query,
+            'results': results,
+            'count': len(results)
+        }, ensure_ascii=False), 200, {'Content-Type': 'application/json'}
+        
+    except Exception as e:
+        return json.dumps({
+            'status': 'error', 
+            'message': str(e)
+        }), 500, {'Content-Type': 'application/json'}
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
