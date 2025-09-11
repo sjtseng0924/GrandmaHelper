@@ -7,8 +7,12 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 from vertexai.generative_models import Part
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+from googleapiclient.discovery import build
 
 app = Flask(__name__)
+
+# Search functionality toggle
+ENABLE_SEARCH = os.environ.get('ENABLE_SEARCH', 'true').lower() == 'true'
 
 connector = None
 engine = None
@@ -76,10 +80,46 @@ def insert_conversation(user_message, user_vector, ai_response, screen_info, goa
             "u": user_message,
             "v": str(user_vector),
             "a": ai_response,
-            "s": json.dumps(screen_info) if isinstance(screen_info, (dict, list)) else str(screen_info),
+            "s": json.dumps(screen_info) if isinstance(screen_info, (dict, list)) else str(screen_info or ""),
             "g": goal
         })
         conn.commit()
+
+
+def search_line_help(query, num_results=5):
+    """Search LINE help documentation using Custom Search API"""
+    if not ENABLE_SEARCH:
+        return []
+        
+    API_KEY = os.environ.get("GOOGLE_SEARCH_API_KEY")
+    SEARCH_ENGINE_ID = "44e73185ae7344428"  # Your provided search engine ID
+    
+    if not API_KEY:
+        print("Warning: GOOGLE_SEARCH_API_KEY not found in environment variables")
+        return []
+    
+    try:
+        service = build("customsearch", "v1", developerKey=API_KEY)
+        result = service.cse().list(
+            q=query,
+            cx=SEARCH_ENGINE_ID,
+            num=num_results,
+            hl='zh-TW'  # Set language to Traditional Chinese
+        ).execute()
+        
+        search_results = []
+        for item in result.get('items', []):
+            search_results.append({
+                'title': item.get('title'),
+                'link': item.get('link'),
+                'snippet': item.get('snippet'),
+                'displayLink': item.get('displayLink')
+            })
+        
+        return search_results
+    except Exception as e:
+        print(f"Search error: {e}")
+        return []
 
 
 @app.route('/', methods=['POST'])
@@ -132,6 +172,15 @@ def handle_app_request():
             for user_text, ai_text in similar_conversations:
                 rag_context += f"使用者: {user_text}\nGemini: {ai_text}\n\n"
 
+        # Search LINE help documentation if enabled
+        search_context = ""
+        if ENABLE_SEARCH:
+            search_results = search_line_help(user_message + " " + current_goal)
+            if search_results:
+                search_context = "\n\n參考資料（來自LINE官方說明文件）：\n"
+                for result in search_results:
+                    search_context += f"- {result['title']}: {result['snippet']}\n  連結：{result['link']}\n\n"
+
         prompt = f"""
         # Task
         依據「最終目標」與當前畫面，產生**下一個單一步驟**的操作指示，讓使用者更接近目標。
@@ -143,7 +192,7 @@ def handle_app_request():
 
 
         # 歷史參考（不可靠，僅供靈感）
-        {rag_context}
+        {rag_context}{search_context}
 
         # Constraints
         1) 僅提供一行中文、口語化、可操作的「單一步驟」指示，務必描述元素位置（例：「請點擊右下角的笑臉圖示」）。
@@ -197,6 +246,35 @@ def handle_app_request():
     except Exception as e:
         error_message = f"與服務或 Gemini 溝通時發生錯誤：{e}"
         return json.dumps({"status": "error", "message": error_message}), 500, {'Content-Type': 'application/json'}
+
+
+@app.route('/search', methods=['POST'])
+def search_endpoint():
+    """Custom search endpoint for testing LINE help documentation search"""
+    if not ENABLE_SEARCH:
+        return json.dumps({"status": "error", "message": "Search functionality is disabled"}), 400
+        
+    try:
+        request_json = request.get_json(silent=True)
+        if not request_json or 'query' not in request_json:
+            return json.dumps({"status": "error", "message": "Missing query parameter"}), 400
+        
+        query = request_json['query']
+        results = search_line_help(query)
+        
+        return json.dumps({
+            'status': 'success',
+            'query': query,
+            'results': results,
+            'count': len(results),
+            'search_enabled': ENABLE_SEARCH
+        }, ensure_ascii=False), 200, {'Content-Type': 'application/json'}
+        
+    except Exception as e:
+        return json.dumps({
+            'status': 'error', 
+            'message': str(e)
+        }), 500, {'Content-Type': 'application/json'}
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
