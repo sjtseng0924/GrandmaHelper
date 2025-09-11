@@ -92,8 +92,7 @@ def search_line_help(query, num_results=5):
         return []
         
     API_KEY = os.environ.get("GOOGLE_SEARCH_API_KEY")
-    SEARCH_ENGINE_ID = "44e73185ae7344428"  # Your provided search engine ID
-    
+    SEARCH_ENGINE_ID = "44e73185ae7344428"
     if not API_KEY:
         print("Warning: GOOGLE_SEARCH_API_KEY not found in environment variables")
         return []
@@ -104,7 +103,7 @@ def search_line_help(query, num_results=5):
             q=query,
             cx=SEARCH_ENGINE_ID,
             num=num_results,
-            hl='zh-TW'  # Set language to Traditional Chinese
+            hl='zh-TW' 
         ).execute()
         
         search_results = []
@@ -140,7 +139,7 @@ def handle_app_request():
 
         elif meta_file:
             try:
-                meta = json.loads(meta_file.read().decode('utf-8'))  # NEW
+                meta = json.loads(meta_file.read().decode('utf-8'))  
             except Exception:
                 return 'Invalid metadata JSON', 400
             user_message = meta.get('user_message')
@@ -182,37 +181,56 @@ def handle_app_request():
                     search_context += f"- {result['title']}: {result['snippet']}\n  連結：{result['link']}\n\n"
 
         prompt = f"""
-        # Task
-        依據「最終目標」與當前畫面，產生**下一個單一步驟**的操作指示，讓使用者更接近目標。
-        若已達成完成判定，請只回覆「恭喜成功！」。
+# Task
+依據「最終目標」與當前畫面，產生**下一個單一步驟**的操作指示，讓使用者更接近目標。
+若已達成完成判定，請只回覆「恭喜成功！」。
 
-        # Inputs
-        - 最終目標: {current_goal}
-        - 使用者訊息: {user_message}
+# Inputs   
+- 最終目標: {current_goal}
+- 使用者訊息: {user_message}
 
+#Line使用手冊
+{search_context}
 
-        # 歷史參考（不可靠，僅供靈感）
-        {rag_context}{search_context}
+# 歷史參考（不可靠，僅供靈感）
+{rag_context}
 
-        # Constraints
-        1) 僅提供一行中文、口語化、可操作的「單一步驟」指示，務必描述元素位置（例：「請點擊右下角的笑臉圖示」）。
-        2) 請使用下列固定用語及規則來描述按鈕，禁止直接引用螢幕顯示文字當作回覆：
-            - 螢幕元素「選擇貼圖及表情貼」→ 口語固定說法：「笑臉圖示」
-            - 螢幕元素「附加選單」→ 口語固定說法：「 + 號」
-            - 螢幕元素「相機」→ 口語固定說法：「相機圖案」
-            - 螢幕元素「照片和影片」→ 口語固定說法：「圖片圖案」
-            - 螢幕元素「語音訊息」→ 口語固定說法：「麥克風圖案」
-            - 使用者選擇聊天頁面時，右上角會有四個沒有名稱的圖示，從右到左分別是圖示為三個點的「更多」、圖示為聊天泡泡的「創建聊天/群組/會議」、圖示為方形的「社群」、圖示為資料夾的「所有相簿」，請仔細對照並回答。
-            請**務必**描述按鈕的位置，例如「請點擊右下角的笑臉圖示」、「請點擊螢幕中間區域的聊天視窗」。
-            若同時存在畫面文案與口語固定說法，**一律**採用口語固定說法做回覆。
-        3) 若元素已為 selected，視為已點擊，勿重複指示。
-        4) 若完成條件成立或當前畫面是最後一步，請「只回覆」：恭喜成功！
-        5) 若問題與畫面操作無關，回覆守門條款固定句。
-        6) 若無法理解使用者表達，先進行意圖確認邏輯（見系統指令），再依結果行動。
+# 判定流程
+1) 完成判定：
+   - 若已達成目標或當前畫面為最後一步 → 請「只回覆」：恭喜成功！
+2) 意圖檢查（不完整意圖直出固定句）：
+   - 定義：完整意圖 = 同時包含「行動」與「對象/目標」的請求（例：傳貼圖給小明、把照片傳給孫子、傳文字訊息給兒子）。
+   - 不完整意圖 = 寒暄/單詞/閒聊/不明確（例：你好、嗨、傳、兒子、OK、在嗎）。
+   - 若判定為不完整意圖 → 請「只回覆」：您的輸入沒有明確目的，請告訴我您想要做到的事情喔!
+3) 守門條款（與畫面操作無關）：
+   - 若問題與手機畫面操作無關 → 請「只回覆」：我是一個APP助手，請提出其他要求。
+4) 產生下一步（僅在 1/2/3 未觸發時執行）：
+   - 依「Constraints」規則輸出**單一步驟**的可操作指示。
 
-        # Output
-        - 僅一行文字（或僅「恭喜成功！」），不要加前後綴說明。
-        """.strip()
+# Constraints
+1) 僅提供**一行**中文、口語化、可操作的「單一步驟」指示，務必描述元素位置（例：「請點擊右下角的笑臉圖示」）。
+2) 按鈕詞彙對照（固定用語，**禁止**直接引用螢幕顯示文字）：
+   - 「選擇貼圖及表情貼」→「笑臉圖示」
+   - 「附加選單」→「+ 號」
+   - 「相機」→「相機圖案」
+   - 「照片和影片」→「圖片圖案」
+   - 「語音訊息」→「麥克風圖案」
+   - 聊天頁右上角四個無名圖示（右→左）：
+     三個點＝「更多」、聊天泡泡＝「創建聊天/群組/會議」、方形＝「社群」、資料夾＝「所有相簿」
+   - **務必**描述位置（如「右下角」「上方中間」「螢幕中間區域」）。
+   - 若同時存在畫面文案與口語固定說法，**一律**採用口語固定說法。
+3) 若元素已為 selected，視為已點擊，勿重複指示。
+4) **請完全相信並高度依照「Line使用手冊」的內容來指引使用者。**
+5) 僅允許以下四種輸出其一：
+   a. 下一步指示（單行）
+   b. 恭喜成功！
+   c. 您的輸入沒有明確目的，請告訴我您想要做到的事情喔!
+   d. 我是一個APP助手，請提出其他要求。
+6) **禁止**加入任何解釋、前後綴、表情符號或自我介紹/身分/能力聲明。
+
+# Output
+僅一行文字（或僅「恭喜成功！」），不要加前後綴說明，絕對不要有表情符號(emoji)。
+""".strip()
 
         if not file_storage and screen_info is not None:
             prompt += f"\n\n螢幕資訊:{json.dumps(screen_info, ensure_ascii=False, indent=2)}\n"
