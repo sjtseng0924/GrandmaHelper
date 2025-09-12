@@ -88,11 +88,13 @@ def insert_conversation(user_message, user_vector, ai_response, screen_info, goa
 
 def search_line_help(query, num_results=5):
     """Search LINE help documentation using Custom Search API"""
+
     if not ENABLE_SEARCH:
         return []
         
     API_KEY = os.environ.get("GOOGLE_SEARCH_API_KEY")
     SEARCH_ENGINE_ID = "44e73185ae7344428"
+
     if not API_KEY:
         print("Warning: GOOGLE_SEARCH_API_KEY not found in environment variables")
         return []
@@ -276,9 +278,10 @@ def handle_app_request():
 @app.route('/search', methods=['POST'])
 def search_endpoint():
     """Custom search endpoint for testing LINE help documentation search"""
+
     if not ENABLE_SEARCH:
         return json.dumps({"status": "error", "message": "Search functionality is disabled"}), 400
-        
+
     try:
         request_json = request.get_json(silent=True)
         if not request_json or 'query' not in request_json:
