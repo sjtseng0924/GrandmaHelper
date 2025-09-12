@@ -13,3 +13,11 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Backend specific
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+.env
+.vscode/
+test_search.json
