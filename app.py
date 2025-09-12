@@ -8,6 +8,7 @@ from flask import Flask, render_template, jsonify, request
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional
 import schedule
+import pytz
 # Database and AI imports commented out for basic functionality
 # import psycopg2
 # import sqlalchemy
@@ -44,25 +45,36 @@ class StatusMonitor:
         self.LINE_API_URL = "https://app-api-service-855188038216.asia-east1.run.app"
         self.MORNING_API_URL = os.environ.get('MORNING_API_URL', 'https://morning-image-api-qw4lchblia-de.a.run.app')
         self.history_file = 'uptime_history.json'
+        self.timezone = pytz.timezone('Asia/Taipei')  # GMT+8
         
         self.load_uptime_history()
         self.initialize_uptime_history()
         self.setup_background_scheduler()
     
     def setup_background_scheduler(self):
-        """Set up scheduled health checks every 30 minutes"""
-        schedule.every(30).minutes.do(self.check_all_services)
+        """Set up scheduled health checks at :00 and :30 minutes"""
+        # Clear any existing jobs
+        schedule.clear()
+        
+        # Schedule at :00 and :30 minutes of every hour
+        schedule.every().hour.at(":00").do(self.check_all_services)
+        schedule.every().hour.at(":30").do(self.check_all_services)
         
         def run_scheduler():
             while True:
                 schedule.run_pending()
-                time.sleep(60)  # Check every minute for scheduled tasks
+                time.sleep(30)  # Check every 30 seconds for scheduled tasks
         
         scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
         scheduler_thread.start()
+        
+        print(f"Scheduler started. Will run health checks at :00 and :30 minutes (GMT+8)")
+        
+        # Run initial check immediately
+        threading.Thread(target=self.check_all_services, daemon=True).start()
     
     def get_timestamp(self):
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+        return datetime.now(self.timezone).strftime("%Y-%m-%d %H:%M:%S GMT+8")
     
     def load_uptime_history(self):
         """Load uptime history from JSON file"""
@@ -100,7 +112,7 @@ class StatusMonitor:
     
     def update_uptime_history(self, service_key: str, status: str):
         """Update hourly uptime history for 72-hour chart"""
-        now = datetime.now()
+        now = datetime.now(self.timezone)
         current_time = now.strftime('%Y-%m-%d %H:%M')
         
         if service_key not in self.uptime_history:
@@ -287,7 +299,7 @@ class StatusMonitor:
     
     def update_status_history(self, service_key: str, status: str):
         """Update 24-hour status history"""
-        now = datetime.now()
+        now = datetime.now(self.timezone)
         if service_key not in self.status_history:
             self.status_history[service_key] = []
         
