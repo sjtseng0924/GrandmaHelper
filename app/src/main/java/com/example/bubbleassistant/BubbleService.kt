@@ -11,7 +11,10 @@ import android.widget.Toast
 import android.content.res.Resources
 
 class BubbleService : Service() {
-
+    companion object {
+        const val ACTION_BUBBLE_STATE = "com.example.bubbleassistant.BUBBLE_STATE"
+        const val EXTRA_RUNNING = "running"
+    }
     private lateinit var windowManager: WindowManager
     private lateinit var bubbleView: View
     private lateinit var deleteZoneView: View
@@ -52,7 +55,9 @@ class BubbleService : Service() {
 
         windowManager.addView(bubbleView, layoutParams)
         windowManager.addView(deleteZoneView, deleteZoneParams)
-
+        // 服務啟動 -> 通知主畫面 Switch 切成 ON
+        sendBroadcast(Intent(ACTION_BUBBLE_STATE).putExtra(EXTRA_RUNNING, true).setPackage(packageName))
+        deleteZoneView.visibility = View.GONE
         val deleteZoneImage = deleteZoneView.findViewById<ImageView>(R.id.delete_zone)
         deleteZoneImage.visibility = View.GONE
 
@@ -72,6 +77,7 @@ class BubbleService : Service() {
                         downX = event.rawX
                         downY = event.rawY
                         isDragging = false
+                        deleteZoneView.visibility = View.VISIBLE
                         deleteZoneImage.visibility = View.VISIBLE
                         return true
                     }
@@ -94,11 +100,12 @@ class BubbleService : Service() {
 
                     MotionEvent.ACTION_UP -> {
                         deleteZoneImage.visibility = View.GONE
+                        deleteZoneView.visibility = View.GONE
                         deleteZoneView.alpha = 0.5f
 
                         return if (isDragging) {
                             if (isOverDeleteZone()) {
-                                Toast.makeText(this@BubbleService, "泡泡已刪除", Toast.LENGTH_SHORT).show()
+                                sendBroadcast(Intent(ACTION_BUBBLE_STATE).putExtra(EXTRA_RUNNING, false).setPackage(packageName))
                                 stopSelf()
                             } else {
                                 val half = Resources.getSystem().displayMetrics.widthPixels / 2
@@ -107,6 +114,10 @@ class BubbleService : Service() {
                             }
                             true
                         } else {
+                            if (OverlayAgent.taskActive) {
+                                Toast.makeText(this@BubbleService, "請按叉叉先結束此次任務，再發問喔！", Toast.LENGTH_SHORT).show()
+                                return true
+                            }
                             // 點擊事件 → 開啟對話框 Activity
                             val intent = Intent(this@BubbleService, ChatDialogActivity::class.java).apply {
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)               // 必要：從 Service 啟動
@@ -159,6 +170,7 @@ class BubbleService : Service() {
         if (::deleteZoneView.isInitialized) {
             windowManager.removeView(deleteZoneView)
         }
+        sendBroadcast(Intent(ACTION_BUBBLE_STATE).putExtra(EXTRA_RUNNING, false).setPackage(packageName))
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
