@@ -1,0 +1,84 @@
+{
+  "uptime_history": {
+    "line_support_api": [
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      }
+    ],
+    "morning_image_api": [
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      }
+    ],
+    "gemini_ai": [
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      }
+    ],
+    "search_api": [
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      }
+    ],
+    "cloud_run": [
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      },
+      {
+        "timestamp": "2025-09-12 18:38",
+        "status": "operational"
+      }
+    ]
+  },
+  "incidents": [],
+  "last_updated": "2025-09-12 18:38:58 GMT+8"
+}
