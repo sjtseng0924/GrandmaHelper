@@ -3,4 +3,5 @@
     <string name="trash_description">垃圾桶</string>
     <string name="hint_input">輸入訊息...</string>
     <string name="send_button">送出</string>
+    <string name="accessibility_service_description">螢幕監控服務，用於分析應用程式畫面並提供操作協助</string>
 </resources>

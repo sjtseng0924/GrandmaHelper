@@ -11,6 +11,9 @@ from googleapiclient.discovery import build
 
 app = Flask(__name__)
 
+# Search functionality toggle
+ENABLE_SEARCH = os.environ.get('ENABLE_SEARCH', 'true').lower() == 'true'
+
 connector = None
 engine = None
 model = None
@@ -77,7 +80,7 @@ def insert_conversation(user_message, user_vector, ai_response, screen_info, goa
             "u": user_message,
             "v": str(user_vector),
             "a": ai_response,
-            "s": json.dumps(screen_info) if isinstance(screen_info, (dict, list)) else str(screen_info),
+            "s": json.dumps(screen_info) if isinstance(screen_info, (dict, list)) else str(screen_info or ""),
             "g": goal
         })
         conn.commit()
@@ -85,9 +88,13 @@ def insert_conversation(user_message, user_vector, ai_response, screen_info, goa
 
 def search_line_help(query, num_results=5):
     """Search LINE help documentation using Custom Search API"""
+
+    if not ENABLE_SEARCH:
+        return []
+        
     API_KEY = os.environ.get("GOOGLE_SEARCH_API_KEY")
-    SEARCH_ENGINE_ID = "44e73185ae7344428"  # Your provided search engine ID
-    
+    SEARCH_ENGINE_ID = "44e73185ae7344428"
+
     if not API_KEY:
         print("Warning: GOOGLE_SEARCH_API_KEY not found in environment variables")
         return []
@@ -98,7 +105,7 @@ def search_line_help(query, num_results=5):
             q=query,
             cx=SEARCH_ENGINE_ID,
             num=num_results,
-            hl='zh-TW'  # Set language to Traditional Chinese
+            hl='zh-TW' 
         ).execute()
         
         search_results = []
@@ -121,7 +128,7 @@ def handle_app_request():
     try:
         request_json = request.get_json(silent=True)
         file_storage = request.files.get('file') if 'file' in request.files else None
-        meta_file = request.files.get('metadata')  # NEW
+        meta_file = request.files.get('metadata') 
 
         user_message = None
         screen_info = None
@@ -134,7 +141,7 @@ def handle_app_request():
 
         elif meta_file:
             try:
-                meta = json.loads(meta_file.read().decode('utf-8'))  # NEW
+                meta = json.loads(meta_file.read().decode('utf-8'))  
             except Exception:
                 return 'Invalid metadata JSON', 400
             user_message = meta.get('user_message')
@@ -166,46 +173,73 @@ def handle_app_request():
             for user_text, ai_text in similar_conversations:
                 rag_context += f"使用者: {user_text}\nGemini: {ai_text}\n\n"
 
-        # Always search LINE help documentation since service is only for LINE usage
-        search_results = search_line_help(user_message + " " + current_goal)
+        # Search LINE help documentation if enabled
         search_context = ""
-        if search_results:
-            search_context = "\n\n參考資料（來自LINE官方說明文件）：\n"
-            for result in search_results:
-                search_context += f"- {result['title']}: {result['snippet']}\n  連結：{result['link']}\n\n"
+        if ENABLE_SEARCH:
+            search_results = search_line_help(user_message + " " + current_goal)
+            if search_results:
+                search_context = "\n\n參考資料（來自LINE官方說明文件）：\n"
+                for result in search_results:
+                    search_context += f"- {result['title']}: {result['snippet']}\n  連結：{result['link']}\n\n"
 
         prompt = f"""
-        你是一個幫助年長者使用LINE手機APP的虛擬助手，你的首要任務是協助使用者達成「最終目標」。
+#預設
+你是一個手機App使用助手，幫助不太會使用手機的老年人達成他們想要的目標，主要應用於LINE，也可以使用於其他軟體。
 
-        請根據以下資訊判斷下一步的正確操作。
+# Task
+依據「最終目標」與當前畫面，產生**下一個單一步驟**的操作指示，讓使用者更接近目標。
+若已達成完成判定，請只回覆「恭喜成功！」。
 
-        最終目標: {current_goal}
+# Inputs   
+- 最終目標: {current_goal}
+- 使用者訊息: {user_message}
 
-        使用者訊息: {user_message}
+#Line使用手冊
+{search_context}
 
-        歷史操作資訊(做為參考，請不要過於依賴，請當作非常不確定的參考):{rag_context}{search_context}
+# 歷史參考（不可靠，僅供靈感）
+{rag_context}
 
-        規則：
-        1. 你必須優先依照「最終目標」判斷，而不是使用者訊息。
-        2. 如果最終目標是「什麼也不做」，代表已經達成目標，請直接單獨回覆「恭喜成功！」，不要將「恭喜成功！」接在其他句子後面或是前面。
-        3. 一些常見的操作指引:
-            -如果螢幕資訊中包含「選擇貼圖及表情貼」，且使用者想要傳送貼圖，請使用者點擊位於螢幕下方，文字輸入框旁邊的笑臉圖示。
-            -如果螢幕資訊中包含「附加選單」，且需要使用附加選單中的功能，請使用者點擊左下角的+號。
-            -如果螢幕資訊中包含「相機」，且使用者想要拍照、傳送照片，請使用者點擊左下角的相機圖案(位於+號右邊)。
-            -如果螢幕資訊中包含「照片和影片」，且使用者想要傳送照片或是影片，請使用者點擊位於螢幕下方，文字輸入框旁邊的圖片圖案(位於相機圖案右邊)。
-            -如果螢幕資訊中包含「語音訊息」，且使用者想要傳送語音訊息，請使用者點擊螢幕右下角的麥克風圖案(位於笑臉右邊)。
-        4. 如果按鈕/選修被標為 selected ，請視為使用者已點擊此按鈕/選修。
-        5. 判斷任務是否達成：
-            - 如果「最終目標」是買貼圖，且螢幕上顯示「購買」或「確定」按鈕，請回覆「恭喜成功！」。
-            - 如果「最終目標」是傳送照片，且螢幕上顯示「傳送」或「發送」按鈕，請回覆「恭喜成功！」。
-            - 如果「最終目標」是傳送訊息，且螢幕上顯示「傳送」或「發送」按鈕，請回覆「恭喜成功！」。
-            - 如果你判斷當前畫面已經是完成任務的最後一步，請直接單獨回覆「恭喜成功！」，不要將「恭喜成功！」接在其他句子後面或是前面。
-        6. 如果問題與畫面無關，請回覆「抱歉，我無法回答這個問題，我是個只會操作手機的助手。」。
-        7. 如果使用者的表達你無法理解，請猜測使用者的意圖並詢問使用者，是否是「{current_goal}」，
-            -如果使用者回答是，請依照當前目標繼續指示使用者操作。
-            -如果使用者回答不是，請回覆「抱歉，我無法理解你的意思，請重新說明你的問題。」。
-        8. 其他情況下，請只提供一句易於理解且口語化的中文指示，簡短清楚，例如：「請點擊右下角的聊天按鈕。」。
-        """.strip()
+# 判定流程
+1) 完成判定：
+   - 若已達成目標或當前畫面為最後一步 → 請「只回覆」：恭喜成功！
+2) 意圖檢查（不完整意圖直出固定句）：
+   - 定義：完整意圖 = 同時包含「行動」與「對象/目標」的請求（例：傳貼圖給小明、把照片傳給孫子、傳文字訊息給兒子）。
+   - 不完整意圖 = 寒暄/單詞/閒聊/不明確（例：你好、嗨、傳、兒子、OK、在嗎）。
+   - 若判定為不完整意圖 → 請「只回覆」：您的輸入沒有明確目的，請告訴我您想要做到的事情喔!
+3) 守門條款（與畫面操作無關）：
+   - 若問題與手機畫面操作無關 → 請「只回覆」：我是一個APP助手，請提出相關的要求。
+4) 產生下一步（僅在 1/2/3 未觸發時執行）：
+   - 依「Constraints」規則輸出**單一步驟**的可操作指示。
+
+# Constraints
+1) 僅提供**一行**中文、口語化、可操作的「單一步驟」指示，務必描述元素位置（例：「請點擊右下角的笑臉圖示」）。
+2) 按鈕詞彙對照（固定用語，**禁止**直接引用螢幕顯示文字）：
+   - 「選擇貼圖及表情貼」→「笑臉圖示」
+   - 「附加選單」→「+ 號」
+   - 「相機」→「相機圖案」
+   - 「照片和影片」→「圖片圖案」
+   - 「語音訊息」→「麥克風圖案」
+   - 聊天頁右上角四個無名圖示（右→左）：
+     三個點＝「更多」、聊天泡泡＝「創建聊天/群組/會議」、方形＝「社群」、資料夾＝「所有相簿」
+   - **務必**描述位置，包含左/右/中間+上/下/中間（如「右上角」「上方中間」「螢幕中間區域」），不要以數字描述(如右邊數來第三個)。
+   - 若同時存在畫面文案與口語固定說法，**一律**採用口語固定說法。
+3) 若元素已為 selected，視為已點擊，勿重複指示。
+4) **請完全相信並高度依照「Line使用手冊」的內容來指引使用者。**
+5) 僅允許以下四種輸出其一：
+   a. 下一步指示（單行）
+   b. 恭喜成功！
+   c. 您的輸入沒有明確目的，請告訴我您想要做到的事情喔!
+   d. 我是一個APP助手，請提出相關的要求。
+6) **禁止**加入任何表情符號。
+7) 如果使用者要進行傳訊息、打電話等在LINE中可以達到的動作，請預設使用者要使用LINE。
+8) 如果使用者目前的所在的畫面/APP無法達成動作，請指引使用者回到主畫面，再指引使用者進入正確的APP。
+9) 如果使用者指定的動作對象不在螢幕裡面，例如「我想打電話給兒子」，請回復類似於「請點擊您兒子的聊天框」，不需詢問使用者他的正確名稱。
+10) 在拍照/錄影時，請稱呼拍照/錄影的按鈕為「圓形拍照/錄影按鈕」，不要稱呼其為截圖按鈕。
+
+# Output
+僅一行文字（或僅「恭喜成功！」），不要加前後綴說明，絕對不要有表情符號(emoji)。
+""".strip()
 
         if not file_storage and screen_info is not None:
             prompt += f"\n\n螢幕資訊:{json.dumps(screen_info, ensure_ascii=False, indent=2)}\n"
@@ -244,6 +278,10 @@ def handle_app_request():
 @app.route('/search', methods=['POST'])
 def search_endpoint():
     """Custom search endpoint for testing LINE help documentation search"""
+
+    if not ENABLE_SEARCH:
+        return json.dumps({"status": "error", "message": "Search functionality is disabled"}), 400
+
     try:
         request_json = request.get_json(silent=True)
         if not request_json or 'query' not in request_json:
@@ -256,7 +294,8 @@ def search_endpoint():
             'status': 'success',
             'query': query,
             'results': results,
-            'count': len(results)
+            'count': len(results),
+            'search_enabled': ENABLE_SEARCH
         }, ensure_ascii=False), 200, {'Content-Type': 'application/json'}
         
     except Exception as e:
