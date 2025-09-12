@@ -43,6 +43,9 @@ class StatusMonitor:
         # Configuration
         self.LINE_API_URL = "https://app-api-service-855188038216.asia-east1.run.app"
         self.MORNING_API_URL = os.environ.get('MORNING_API_URL', 'https://morning-image-api-qw4lchblia-de.a.run.app')
+        self.history_file = 'uptime_history.json'
+        
+        self.load_uptime_history()
         self.initialize_uptime_history()
         self.setup_background_scheduler()
     
@@ -60,6 +63,33 @@ class StatusMonitor:
     
     def get_timestamp(self):
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+    
+    def load_uptime_history(self):
+        """Load uptime history from JSON file"""
+        try:
+            if os.path.exists(self.history_file):
+                with open(self.history_file, 'r') as f:
+                    data = json.load(f)
+                    self.uptime_history = data.get('uptime_history', {})
+                    self.incidents = data.get('incidents', [])
+                    print(f"Loaded history with {len(self.uptime_history)} services")
+        except Exception as e:
+            print(f"Error loading history: {e}")
+            self.uptime_history = {}
+            self.incidents = []
+    
+    def save_uptime_history(self):
+        """Save uptime history to JSON file"""
+        try:
+            data = {
+                'uptime_history': self.uptime_history,
+                'incidents': self.incidents,
+                'last_updated': self.get_timestamp()
+            }
+            with open(self.history_file, 'w') as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            print(f"Error saving history: {e}")
     
     def initialize_uptime_history(self):
         """Initialize 72 hours of uptime history - start with all operational"""
@@ -85,6 +115,9 @@ class StatusMonitor:
         # Keep only last 72 hours (144 entries at 30min intervals)
         if len(self.uptime_history[service_key]) > 144:
             self.uptime_history[service_key] = self.uptime_history[service_key][-144:]
+        
+        # Save to file after update
+        self.save_uptime_history()
     
     def calculate_72h_uptime(self, service_key: str) -> float:
         """Calculate uptime percentage for last 72 hours"""
@@ -319,16 +352,14 @@ def status_page():
     for service_key in monitor.services.keys():
         service_uptime_72h[service_key] = monitor.calculate_72h_uptime(service_key)
     
-    # Reverse uptime history so newest status appears on the right
-    uptime_history_reversed = {}
-    for service_key, history in monitor.uptime_history.items():
-        uptime_history_reversed[service_key] = list(reversed(history))
+    # History is already in chronological order (oldest to newest)
+    # Since we want newest on the right, we don't reverse
     
     return render_template('status.html', 
                          services=monitor.services,
                          overall_status=overall_status,
                          incidents=monitor.incidents[-5:],
-                         uptime_history=uptime_history_reversed,
+                         uptime_history=monitor.uptime_history,
                          service_uptime_72h=service_uptime_72h)
 
 @app.route('/api/status')
