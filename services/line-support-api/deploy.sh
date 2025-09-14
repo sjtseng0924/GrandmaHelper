@@ -6,7 +6,7 @@ set -e
 
 # Configuration
 PROJECT_ID="hackathon-468512"
-SERVICE_NAME="grandma-helper-line-api"
+SERVICE_NAME="app-api-service"
 REGION="asia-east1"
 IMAGE_NAME="gcr.io/$PROJECT_ID/$SERVICE_NAME"
 

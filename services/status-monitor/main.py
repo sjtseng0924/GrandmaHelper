@@ -9,12 +9,6 @@ from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional
 import schedule
 import pytz
-# Database and AI imports commented out for basic functionality
-# import psycopg2
-# import sqlalchemy
-# from google.cloud.sql.connector import Connector
-# import vertexai
-# from vertexai.generative_models import GenerativeModel
 
 app = Flask(__name__)
 

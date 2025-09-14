@@ -6,8 +6,8 @@ set -e
 
 # Configuration
 PROJECT_ID="hackathon-468512"
-SERVICE_NAME="grandma-helper-image-api"
-REGION="us-central1"
+SERVICE_NAME="morning-image-api"
+REGION="asia-east1"
 IMAGE_NAME="gcr.io/$PROJECT_ID/$SERVICE_NAME"
 
 echo "Deploying Image Generation API to Google Cloud Run"
@@ -18,7 +18,7 @@ echo "Image: $IMAGE_NAME"
 
 # Build and push Docker image
 echo "Building Docker image..."
-docker build -f Dockerfile.image-api -t $IMAGE_NAME .
+docker build -t $IMAGE_NAME .
 
 echo "Pushing image to Google Container Registry..."
 docker push $IMAGE_NAME
