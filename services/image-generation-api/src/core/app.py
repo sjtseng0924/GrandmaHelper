@@ -5,6 +5,7 @@ import random
 import tempfile
 import datetime
 from datetime import datetime as dt
+import pytz
 from flask import Flask, request, jsonify, send_file
 import vertexai
 from vertexai.generative_models import GenerativeModel
@@ -36,6 +37,19 @@ HOLIDAY_MAP = {
     "5-1": "勞動節",
     "10-10": "雙十節"
 }
+
+def get_time_based_greeting():
+    """Get greeting based on current time in GMT+8"""
+    gmt8 = pytz.timezone('Asia/Taipei')
+    current_time = dt.now(gmt8)
+    hour = current_time.hour
+    
+    if 0 <= hour < 11:
+        return "早安"
+    elif 11 <= hour < 16:
+        return "午安"
+    else:  # 16 <= hour < 24
+        return "晚安"
 
 def log_debug(step, data, save_file=None):
     """Debug logging with savepoints"""
@@ -126,8 +140,8 @@ def generate_blessing_text(user_input=None, image_prompt=None, holiday=None):
     _, text_model = get_models()
     
     if not image_prompt:
-        # Fallback blessing if no image prompt
-        return "早安祝福"
+        # Fallback blessing if no image prompt - use time-based greeting
+        return f"{get_time_based_greeting()}祝福"
 
     system_prompt = f"""
 我有以下資訊：
@@ -166,11 +180,10 @@ def generate_display_text(config, prompt=None, date=None, custom_text=None):
             if holiday:
                 blessing_text = f"{holiday}快樂"
             else:
-                blessing_text = "早安祝福"
+                blessing_text = f"{get_time_based_greeting()}祝福"
     
-    # Get main text from config or default
-    text_overlays = config.get('text_overlays', {})
-    main_text = text_overlays.get('default', {}).get('main', '早安')
+    # Get time-based greeting instead of static default
+    main_text = get_time_based_greeting()
     
     result = {
         "main_text": main_text,
@@ -212,8 +225,9 @@ def build_image_prompt(config, text_data, uploaded_image=None, style=None):
         prompt_templates = config.get('prompt_templates', {})
         main_template = prompt_templates.get('main_template', {})
         
-        # Fallback template
-        formatted_prompt = f"""生成一張早安祝福背景圖片，台灣日常質感。
+        # Fallback template with time-based greeting
+        time_greeting = get_time_based_greeting()
+        formatted_prompt = f"""生成一張{time_greeting}祝福背景圖片，台灣日常質感。
 金色晨光 + 淺景深 + 柔和散景，畫面乾淨、通透。
 構圖：三分法構圖，背景層次分明。
 重要：請不要包含任何文字、字體或文案，只要純淨的背景畫面。

@@ -57,8 +57,22 @@
   "text_overlays": {
     "default": {
       "main": "早安",
-      "sub": "good morning",
+      "sub": "good morning", 
       "blessing": "{祝福短句}"
+    },
+    "time_based": {
+      "早安": {
+        "time_range": "0:00-11:00",
+        "sub": "good morning"
+      },
+      "午安": {
+        "time_range": "11:00-16:00", 
+        "sub": "good afternoon"
+      },
+      "晚安": {
+        "time_range": "16:00-0:00",
+        "sub": "good evening"
+      }
     },
     "holiday": {
       "聖誕節": ["聖誕快樂，早安"],
