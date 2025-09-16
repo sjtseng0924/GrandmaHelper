@@ -10,7 +10,7 @@ from flask import Flask, request, jsonify, send_file
 import vertexai
 from vertexai.generative_models import GenerativeModel
 from vertexai.preview.vision_models import ImageGenerationModel
-from text_pic import overlay_greeting
+from src.utils.text_overlay import overlay_greeting
 import traceback
 
 app = Flask(__name__)
@@ -600,7 +600,7 @@ def debug_info():
                 })
         
         # Check font availability
-        from text_pic import find_font, CANDIDATE_FONTS
+        from src.utils.text_overlay import find_font, CANDIDATE_FONTS
         available_fonts = []
         for font_path in CANDIDATE_FONTS:
             if os.path.exists(font_path):

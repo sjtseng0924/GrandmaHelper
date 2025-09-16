@@ -17,9 +17,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY main.py .
-COPY text_pic.py .
+COPY src/ ./src/
 COPY config/ ./config/
+COPY tests/ ./tests/
 
 # Expose the port
 EXPOSE 8081
@@ -27,6 +27,7 @@ EXPOSE 8081
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8081
+ENV PYTHONPATH=/app
 
 # Run the application
-CMD ["python", "main.py"]
+CMD ["python", "src/core/app.py"]
