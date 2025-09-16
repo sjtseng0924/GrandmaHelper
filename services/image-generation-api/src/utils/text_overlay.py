@@ -157,11 +157,13 @@ def overlay_greeting(
         v_corner = "top_right"
         br_corner = "top_left"
     font_top, stroke_top, (tw, th) = size_text_to_target_width(
-        draw, top_text, init_px=int(W * 0.24),
-        target_w_ratio=top_target_width_ratio, W=W,
+        draw, top_text, init_px=int(W * 0.16),  # Reduced from 0.24 to 0.16 to make text smaller
+        target_w_ratio=0.65, W=W,  # Reduced from 0.85 to 0.65 for better edge alignment
         stroke_ratio=stroke_ratio, font_path=font_path
     )
-    top_x, top_y = corner_xy(W, H, tw, th, big_corner, margin)
+    # Reduce margin to 30% of original for better edge alignment
+    reduced_margin = int(margin * 0.3)
+    top_x, top_y = corner_xy(W, H, tw, th, big_corner, reduced_margin)
     draw.text((top_x, top_y), top_text, font=font_top,
               fill=top_color, stroke_width=stroke_top, stroke_fill=(0, 0, 0))
     f_v, stroke_v, line_spacing, v_text, (vw, vh) = size_vertical_text_to_target_height(
