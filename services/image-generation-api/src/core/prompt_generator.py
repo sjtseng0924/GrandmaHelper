@@ -62,7 +62,7 @@ def generate_blessing(user_input=None, image_prompt=None, holiday=None):
 - 節日: {holiday or '無'}
 
 請生成一句中文祝福語，用於圖片上方。
-要求：簡短、貼近節日或主題，如果沒有特定節日，生成通用"繁體中文"祝福。
+要求：不超過8個字、貼近節日或主題，如果沒有特定節日，生成通用"繁體中文"祝福。
 只輸出祝福文字，不要其他描述。
     """.strip()
 

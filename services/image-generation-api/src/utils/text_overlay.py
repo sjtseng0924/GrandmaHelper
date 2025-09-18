@@ -78,8 +78,8 @@ def size_text_to_target_width(draw, text, init_px, target_w_ratio, W, stroke_rat
 def size_vertical_text_to_target_height(draw, text, init_px, target_h_ratio, W, H, line_spacing_ratio, stroke_ratio, font_path):
     n = max(1, len(text))
     
-    # Calculate minimum font size based on what 6 characters would use
-    target_chars = 6
+    # Calculate minimum font size based on what 7 characters would use
+    target_chars = 7
     min_guess = init_px
     for _ in range(12):
         f = load_font(min_guess, font_path)
@@ -160,22 +160,22 @@ def overlay_greeting(
     if layout == 1:
         big_corner = "top_right"
         v_corner = "bottom_left"
-        br_corner = "bottom_right"
+        br_corner = "bottom_right"  # Right side, bottom
     elif layout == 2:
         big_corner = "bottom_right"
         v_corner = "top_left"
-        br_corner = "bottom_left"
+        br_corner = "top_right"     # Right side, top (opposite of layout 1)
     elif layout == 3:
         big_corner = "top_left"
         v_corner = "bottom_right"
-        br_corner = "bottom_left"
-    else:
+        br_corner = "bottom_left"   # Left side, bottom
+    else:  # layout == 4
         big_corner = "bottom_left"
         v_corner = "top_right"
-        br_corner = "top_left"
+        br_corner = "top_left"      # Left side, top (opposite of layout 3)
     font_top, stroke_top, (tw, th) = size_text_to_target_width(
-        draw, top_text, init_px=int(W * 0.16),  # Reduced from 0.24 to 0.16 to make text smaller
-        target_w_ratio=0.65, W=W,  # Reduced from 0.85 to 0.65 for better edge alignment
+        draw, top_text, init_px=int(W * 0.20),  # Increased from 0.16 to 0.20 to make greeting text bigger
+        target_w_ratio=0.75, W=W,  # Increased from 0.65 to 0.75 for bigger text
         stroke_ratio=stroke_ratio, font_path=font_path
     )
     # Reduce margin further to align closer to edges, especially top alignment
