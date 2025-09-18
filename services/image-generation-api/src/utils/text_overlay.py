@@ -160,19 +160,19 @@ def overlay_greeting(
     if layout == 1:
         big_corner = "top_right"
         v_corner = "bottom_left"
-        br_corner = "bottom_right"  # Right side, bottom
+        br_corner = "bottom_right"
     elif layout == 2:
         big_corner = "bottom_right"
         v_corner = "top_left"
-        br_corner = "top_right"     # Right side, top (opposite of layout 1)
+        br_corner = "top_right"
     elif layout == 3:
         big_corner = "top_left"
         v_corner = "bottom_right"
-        br_corner = "bottom_left"   # Left side, bottom
+        br_corner = "bottom_left"
     else:  # layout == 4
         big_corner = "bottom_left"
         v_corner = "top_right"
-        br_corner = "top_left"      # Left side, top (opposite of layout 3)
+        br_corner = "top_left"
     font_top, stroke_top, (tw, th) = size_text_to_target_width(
         draw, top_text, init_px=int(W * 0.20),  # Increased from 0.16 to 0.20 to make greeting text bigger
         target_w_ratio=0.75, W=W,  # Increased from 0.65 to 0.75 for bigger text
