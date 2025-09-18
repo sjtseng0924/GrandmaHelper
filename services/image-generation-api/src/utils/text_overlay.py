@@ -163,7 +163,23 @@ def overlay_greeting(
     )
     # Reduce margin further to align closer to edges, especially top alignment
     reduced_margin = int(margin * 0.1)  # Much smaller margin for tighter edge alignment
-    top_x, top_y = corner_xy(W, H, tw, th, big_corner, reduced_margin)
+    
+    # Custom positioning logic for better bottom alignment
+    if big_corner == "top_left":
+        top_x, top_y = reduced_margin, reduced_margin
+    elif big_corner == "top_right":
+        top_x, top_y = W - reduced_margin - tw, reduced_margin
+    elif big_corner == "bottom_left":
+        top_x, top_y = reduced_margin, H - reduced_margin - th
+    elif big_corner == "bottom_right":
+        # For bottom-right, adjust positioning to account for text baseline
+        top_x = W - reduced_margin - tw
+        # Use font metrics for more precise bottom alignment
+        bbox = draw.textbbox((0, 0), top_text, font=font_top, stroke_width=stroke_top)
+        text_height = bbox[3] - bbox[1]
+        top_y = H - reduced_margin - text_height
+    else:
+        top_x, top_y = W - reduced_margin - tw, reduced_margin
     draw.text((top_x, top_y), top_text, font=font_top,
               fill=top_color, stroke_width=stroke_top, stroke_fill=(0, 0, 0))
     f_v, stroke_v, line_spacing, v_text, (vw, vh) = size_vertical_text_to_target_height(
