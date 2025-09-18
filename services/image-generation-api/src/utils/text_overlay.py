@@ -77,6 +77,23 @@ def size_text_to_target_width(draw, text, init_px, target_w_ratio, W, stroke_rat
 
 def size_vertical_text_to_target_height(draw, text, init_px, target_h_ratio, W, H, line_spacing_ratio, stroke_ratio, font_path):
     n = max(1, len(text))
+    
+    # Calculate minimum font size based on what 6 characters would use
+    target_chars = 6
+    min_guess = init_px
+    for _ in range(12):
+        f = load_font(min_guess, font_path)
+        line_spacing = int(f.size * line_spacing_ratio)
+        bb = draw.textbbox((0, 0), "字", font=f)
+        ch_h = (bb[3] - bb[1])
+        total_h = target_chars * ch_h + (target_chars - 1) * line_spacing
+        if total_h <= int(H * target_h_ratio) or min_guess <= 16:
+            break
+        scale = (H * target_h_ratio) / max(1, total_h)
+        min_guess = max(16, int(f.size * (0.9 * scale + 0.1)))
+    
+    # Now calculate font size for actual text, using the 6-char size as minimum
+    min_font_size = min_guess
     guess = init_px
     for _ in range(12):
         f = load_font(guess, font_path)
@@ -84,10 +101,10 @@ def size_vertical_text_to_target_height(draw, text, init_px, target_h_ratio, W, 
         bb = draw.textbbox((0, 0), "字", font=f)
         ch_h = (bb[3] - bb[1])
         total_h = n * ch_h + (n - 1) * line_spacing
-        if total_h <= int(H * target_h_ratio) or guess <= 16:
+        if total_h <= int(H * target_h_ratio) or guess <= min_font_size:
             break
         scale = (H * target_h_ratio) / max(1, total_h)
-        guess = max(16, int(f.size * (0.9 * scale + 0.1)))
+        guess = max(min_font_size, int(f.size * (0.9 * scale + 0.1)))
     f = load_font(guess, font_path)
     line_spacing = int(f.size * line_spacing_ratio)
     stroke = max(1, int(f.size * stroke_ratio))
