@@ -161,8 +161,8 @@ def overlay_greeting(
         target_w_ratio=0.65, W=W,  # Reduced from 0.85 to 0.65 for better edge alignment
         stroke_ratio=stroke_ratio, font_path=font_path
     )
-    # Reduce margin to 30% of original for better edge alignment
-    reduced_margin = int(margin * 0.3)
+    # Reduce margin further to align closer to edges, especially top alignment
+    reduced_margin = int(margin * 0.1)  # Much smaller margin for tighter edge alignment
     top_x, top_y = corner_xy(W, H, tw, th, big_corner, reduced_margin)
     draw.text((top_x, top_y), top_text, font=font_top,
               fill=top_color, stroke_width=stroke_top, stroke_fill=(0, 0, 0))
