@@ -61,13 +61,35 @@ def get_similar_conversations(query_vector, goal):
     engine = get_db_engine()
     with engine.connect() as conn:
         query = sqlalchemy.text(
-            "SELECT user_input, ai_response "
+            "SELECT user_input, ai_response,screen_info "
             "FROM conversations "
             "WHERE goal = :goal_val "
-            "ORDER BY user_input_vector <-> CAST(:vec AS vector) LIMIT 3"
+            "ORDER BY user_input_vector <-> CAST(:vec AS vector) LIMIT 5"
         )
         result = list(conn.execute(query, {"vec": str(query_vector), "goal_val": goal}))
         return result
+
+def get_last_conversation(goal, id_window=10, allow_cross_goal_fallback=False):
+    engine = get_db_engine()
+    with engine.connect() as conn:
+        max_id_row = conn.execute(sqlalchemy.text("SELECT COALESCE(MAX(id), 0) FROM conversations")).scalar()
+        lower_bound_id = max(0, (max_id_row or 0) - id_window)
+
+        q_same_goal = sqlalchemy.text(
+            "SELECT user_input, ai_response, screen_info "
+            "FROM conversations "
+            "WHERE goal = :goal_val "
+            "  AND id >= :lower_id "
+            "ORDER BY id DESC "
+            "LIMIT 1"
+        )
+        row = conn.execute(q_same_goal, {"goal_val": goal, "lower_id": lower_bound_id}).fetchone()
+        if row:
+            return row
+
+        return None
+
+
 
 
 def insert_conversation(user_message, user_vector, ai_response, screen_info, goal):
@@ -88,13 +110,11 @@ def insert_conversation(user_message, user_vector, ai_response, screen_info, goa
 
 def search_line_help(query, num_results=5):
     """Search LINE help documentation using Custom Search API"""
-
     if not ENABLE_SEARCH:
         return []
         
     API_KEY = os.environ.get("GOOGLE_SEARCH_API_KEY")
     SEARCH_ENGINE_ID = "44e73185ae7344428"
-
     if not API_KEY:
         print("Warning: GOOGLE_SEARCH_API_KEY not found in environment variables")
         return []
@@ -165,7 +185,7 @@ def handle_app_request():
         if not file_storage and screen_info is None:
             return 'Missing screen image or screen_info', 400
 
-                user_vector = get_embedding(user_message)
+        user_vector = get_embedding(user_message)
         similar_conversations = get_similar_conversations(user_vector, current_goal)
         rag_context = ""
         if similar_conversations:
@@ -319,13 +339,13 @@ def handle_app_request():
         error_message = f"與服務或 Gemini 溝通時發生錯誤：{e}"
         return json.dumps({"status": "error", "message": error_message}), 500, {'Content-Type': 'application/json'}
 
+
 @app.route('/search', methods=['POST'])
 def search_endpoint():
     """Custom search endpoint for testing LINE help documentation search"""
-
     if not ENABLE_SEARCH:
         return json.dumps({"status": "error", "message": "Search functionality is disabled"}), 400
-
+        
     try:
         request_json = request.get_json(silent=True)
         if not request_json or 'query' not in request_json:
