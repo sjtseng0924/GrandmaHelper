@@ -170,14 +170,13 @@ def overlay_greeting(
     elif big_corner == "top_right":
         top_x, top_y = W - reduced_margin - tw, reduced_margin
     elif big_corner == "bottom_left":
-        top_x, top_y = reduced_margin, H - reduced_margin - th
+        # For bottom positioning, use same margin calculation as br_text for consistency
+        top_x = reduced_margin
+        top_y = H - margin - th  # Use standard margin like br_text for proper bottom alignment
     elif big_corner == "bottom_right":
-        # For bottom-right, adjust positioning to account for text baseline
+        # For bottom-right, use same margin calculation as br_text for consistency  
         top_x = W - reduced_margin - tw
-        # Use font metrics for more precise bottom alignment
-        bbox = draw.textbbox((0, 0), top_text, font=font_top, stroke_width=stroke_top)
-        text_height = bbox[3] - bbox[1]
-        top_y = H - reduced_margin - text_height
+        top_y = H - margin - th  # Use standard margin like br_text for proper bottom alignment
     else:
         top_x, top_y = W - reduced_margin - tw, reduced_margin
     draw.text((top_x, top_y), top_text, font=font_top,
