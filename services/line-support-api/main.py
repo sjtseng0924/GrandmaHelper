@@ -69,7 +69,7 @@ def get_similar_conversations(query_vector, goal):
         result = list(conn.execute(query, {"vec": str(query_vector), "goal_val": goal}))
         return result
 
-def get_last_conversation(goal, id_window=10, allow_cross_goal_fallback=False):
+def get_last_conversation(goal, id_window=10):
     engine = get_db_engine()
     with engine.connect() as conn:
         max_id_row = conn.execute(sqlalchemy.text("SELECT COALESCE(MAX(id), 0) FROM conversations")).scalar()
@@ -88,9 +88,7 @@ def get_last_conversation(goal, id_window=10, allow_cross_goal_fallback=False):
             return row
 
         return None
-
-
-
+    
 
 def insert_conversation(user_message, user_vector, ai_response, screen_info, goal):
     engine = get_db_engine()
@@ -194,7 +192,7 @@ def handle_app_request():
                 rag_context += f"使用者: {user_text}\nGemini: {ai_text}\nscreen_info:{hist_screen_info}\n\n"
 
          
-        last_row = get_last_conversation(current_goal, id_window=10, allow_cross_goal_fallback=False)
+        last_row = get_last_conversation(current_goal, id_window=10)
 
         last_conversation = ""
         if last_row:
@@ -221,7 +219,7 @@ def handle_app_request():
 
         prompt = f"""
 #預設
-你是一個手機App使用助手，幫助不太會使用手機的老年人達成他們想要的目標，主要應用於LINE和BubbleAssistant，也可以使用於其他軟體。
+你是一個手機App使用助手，幫助不太會使用手機的老年人達成他們想要的目標，主要應用於LINE和Grandma Helper，也可以使用於其他軟體。
 
 # Task
 依據「最終目標」與當前畫面，產生**下一個單一步驟**的操作指示，讓使用者更接近目標。
