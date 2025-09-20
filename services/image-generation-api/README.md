@@ -4,15 +4,62 @@ This is a simple image generation and prompt testing service built on Google Ver
 
 ## Features
 
-- **Image Generation**: Generate images from text prompts using Imagen 3.0
+- ⭐ **Perfect Chinese Text**: 2-step process generates clean backgrounds + overlays perfect Chinese text using PIL
+- **Image Generation**: Generate images from text prompts using Imagen 3.0  
+- **Morning Image Templates**: Seasonal and cultural templates for Chinese greeting cards
 - **Prompt Enhancement**: Improve user prompts using Gemini for better image generation
 - **Prompt Variations**: Generate multiple variations of a base prompt for testing
 - **Health Check**: Simple health monitoring endpoint
 
+## 🎯 Recommended Workflow
+
+**For Chinese Morning Greetings:** Use `/generate-with-text` endpoint
+1. AI generates clean background (no text artifacts)
+2. PIL overlays perfect Chinese fonts
+3. Result: Professional greeting cards with crisp text
+
 ## API Endpoints
 
+### POST /generate-with-text ⭐ NEW RECOMMENDED
+Generate morning images with perfect Chinese text overlay (2-step process).
+
+**Request:**
+```json
+{
+  "festival": "冬至",
+  "blessing": "闔家團圓，溫暖如意",
+  "main_text": "早安",
+  "style": "countryside_landscape"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "festival": "冬至",
+  "main_text": "早安",
+  "blessing_text": "闔家團圓，溫暖如意",
+  "workflow": "background_generation + text_overlay",
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAA...",
+  "mime_type": "image/jpeg"
+}
+```
+
+### POST /generate
+Generate morning images using AI-generated text (original method).
+
+**Request:**
+```json
+{
+  "festival": "冬至",
+  "blessing": "平安健康",
+  "style": "countryside_landscape"
+}
+```
+
 ### POST /generate-image
-Generate images from text prompts.
+Generate images from custom text prompts.
 
 **Request:**
 ```json
@@ -21,22 +68,6 @@ Generate images from text prompts.
   "number_of_images": 1,
   "guidance_scale": 20,
   "safety_filter_level": "block_few"
-}
-```
-
-**Response:**
-```json
-{
-  "status": "success",
-  "prompt": "a beautiful sunset over mountains",
-  "images": [
-    {
-      "image_id": 1,
-      "image_base64": "iVBORw0KGgoAAAANSUhEUgAA...",
-      "mime_type": "image/png"
-    }
-  ],
-  "count": 1
 }
 ```
 
