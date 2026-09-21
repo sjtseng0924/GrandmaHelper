@@ -10,6 +10,12 @@
 
 GrandmaHelper is an Android application that helps seniors navigate smartphones more easily, particularly the LINE messaging app. The app acts as a bridge, making modern technologies accessible for seniors by providing AI-powered guidance that helps them use their phones with confidence, skill, and joy.
 
+<p align="center">
+  <img src="docs/images/chat.png" width="250" alt="GrandmaHelper chat assistant">
+  <img src="docs/images/teaching.png" width="250" alt="Morning greeting image">
+  <img src="docs/images/greeting.png" width="250" alt="GrandmaHelper home screen">
+</p>
+
 ## Awards
 
 - **1st Place – Google Track, Mei-Chu Hackathon 2025**  
